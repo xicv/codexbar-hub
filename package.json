@@ -1,0 +1,45 @@
+{
+  "name": "@nickcao/codexbar-hub",
+  "version": "0.1.0",
+  "description": "Claude Code statusline that renders claude-hud, the caffeinate ☕ segment, and Codex + Claude usage pace-bars sourced from CodexBar.",
+  "type": "module",
+  "license": "MIT",
+  "author": "xicv",
+  "homepage": "https://github.com/xicv/codexbar-hub#readme",
+  "bugs": {
+    "url": "https://github.com/xicv/codexbar-hub/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xicv/codexbar-hub.git"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "codex",
+    "codexbar",
+    "statusline",
+    "claude-hud",
+    "usage",
+    "macos"
+  ],
+  "bin": {
+    "codexbar-statusline": "dist/statusline.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "tsc && node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
