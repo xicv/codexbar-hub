@@ -200,16 +200,61 @@ function renderCaffeineSegment(): string {
   return `☕ ${formatDuration(elapsed)} (∞)`;
 }
 
+function renderComposerSegment(): string {
+  if (process.env.COMPOSER_STATUS_DISABLE === "1") return "";
+
+  try {
+    const stateDir = process.env.COMPOSER_STATE_DIR || (process.env.HOME ? join(process.env.HOME, ".composer", "state") : "");
+    if (!stateDir) return "";
+
+    const raw = readFileSync(join(stateDir, "active-runs.json"), "utf8");
+    const runs = JSON.parse(raw) as unknown;
+    if (!Array.isArray(runs) || runs.length === 0) return "";
+
+    const now = Date.now();
+    let longestRun: Record<string, unknown> | null = null;
+    let longestElapsedMs = -1;
+
+    for (const run of runs) {
+      if (run === null || typeof run !== "object") continue;
+      const startedAt = (run as Record<string, unknown>).startedAt;
+      const parsed = typeof startedAt === "string" ? Date.parse(startedAt) : Number.NaN;
+      const elapsedMs = Number.isFinite(parsed) ? Math.max(0, now - parsed) : 0;
+      if (elapsedMs > longestElapsedMs) {
+        longestRun = run as Record<string, unknown>;
+        longestElapsedMs = elapsedMs;
+      }
+    }
+
+    if (!longestRun) return "";
+
+    const elapsedSeconds = Math.floor(longestElapsedMs / 1000);
+    const elapsed = elapsedSeconds >= 60 ? `${Math.floor(elapsedSeconds / 60)}m` : `${elapsedSeconds}s`;
+    const tool = typeof longestRun.tool === "string" && longestRun.tool.length > 0 ? longestRun.tool : "unknown";
+    const toolLabel = tool.replace(/^composer_/, "");
+    const provider =
+      typeof longestRun.providerLabel === "string" && longestRun.providerLabel.length > 0
+        ? longestRun.providerLabel
+        : typeof longestRun.providerRole === "string" && longestRun.providerRole.length > 0
+          ? longestRun.providerRole
+          : "";
+
+    return `⚡composer: ${toolLabel}${provider ? `(${provider})` : ""} ${elapsed}`;
+  } catch {
+    return "";
+  }
+}
+
 function main(): void {
   const stdin = readStdin();
   const hudOut = runHud(stdin) || renderFallback(stdin);
   const segment = renderCaffeineSegment();
+  const composerSegment = renderComposerSegment();
   const sep = process.env.CAFFEINATE_HUD_SEP || " │ ";
 
   const lines: string[] = [];
-  if (hudOut && segment) lines.push(`${hudOut}${sep}${segment}`);
-  else if (hudOut) lines.push(hudOut);
-  else if (segment) lines.push(segment);
+  const headParts = [hudOut, segment, composerSegment].filter((p) => p.length > 0);
+  if (headParts.length > 0) lines.push(headParts.join(sep));
 
   const usage = renderUsageLines();
   if (usage) lines.push(usage);
