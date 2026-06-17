@@ -1,6 +1,6 @@
 {
   "name": "@nickcao/codexbar-hub",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Claude Code statusline that renders claude-hud, the caffeinate ☕ segment, and Codex + Claude usage pace-bars sourced from CodexBar.",
   "type": "module",
   "license": "MIT",
