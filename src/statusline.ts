@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getStatus } from "./caffeinate.js";
+import { renderGitSegment } from "./git.js";
 import { formatDuration, renderBar } from "./parse.js";
 import { STATE_DIR } from "./state.js";
 import { renderUsageLines } from "./usage.js";
@@ -153,6 +154,8 @@ function renderFallback(stdin: string): string {
 
   const parts: string[] = [`[${model}]`];
   if (dir) parts.push(shortPath(dir));
+  const gitSeg = renderGitSegment(dir);
+  if (gitSeg) parts.push(gitSeg);
   if (typeof ctx === "number") parts.push(`ctx ${Math.round(ctx)}%`);
   return parts.join(" ");
 }

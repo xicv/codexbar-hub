@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -98,4 +98,58 @@ test("no caffeinate + no HUD = only fallback", () => {
   const { stdout } = runStatusline(stdin);
   assert.match(stdout, /^\[X\]/);
   assert.doesNotMatch(stdout, /☕/);
+});
+
+test("fallback: renders git:(branch* [+N]) for a dirty repo", () => {
+  const repo = mkdtempSync(join(tmpdir(), "codexbar-git-test-"));
+  const g = (...args) => spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+  try {
+    g("init", "-q", "-b", "main");
+    g("config", "user.email", "t@example.com");
+    g("config", "user.name", "Test");
+    writeFileSync(join(repo, "a.txt"), "one\n");
+    g("add", "-A");
+    g("commit", "-qm", "init");
+    writeFileSync(join(repo, "a.txt"), "one\ntwo\nthree\n");
+
+    const stdin = JSON.stringify({ model: { display_name: "X" }, workspace: { current_dir: repo } });
+    const { stdout } = runStatusline(stdin);
+    // ANSI color codes are interleaved, so match the pieces individually.
+    assert.match(stdout, /git:\(/);
+    assert.match(stdout, /main\*/);
+    assert.match(stdout, /\+2/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+test("fallback: no git segment outside a repo", () => {
+  const nonRepo = mkdtempSync(join(tmpdir(), "codexbar-nogit-test-"));
+  try {
+    const stdin = JSON.stringify({ model: { display_name: "X" }, workspace: { current_dir: nonRepo } });
+    const { stdout } = runStatusline(stdin);
+    assert.doesNotMatch(stdout, /git:\(/);
+  } finally {
+    rmSync(nonRepo, { recursive: true, force: true });
+  }
+});
+
+test("CAFFEINATE_GIT_DISABLE=1 suppresses the fallback git segment", () => {
+  const repo = mkdtempSync(join(tmpdir(), "codexbar-gitoff-test-"));
+  const g = (...args) => spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+  try {
+    g("init", "-q", "-b", "main");
+    g("config", "user.email", "t@example.com");
+    g("config", "user.name", "Test");
+    writeFileSync(join(repo, "a.txt"), "one\n");
+    g("add", "-A");
+    g("commit", "-qm", "init");
+    writeFileSync(join(repo, "a.txt"), "changed\n");
+
+    const stdin = JSON.stringify({ model: { display_name: "X" }, workspace: { current_dir: repo } });
+    const { stdout } = runStatusline(stdin, { CAFFEINATE_GIT_DISABLE: "1" });
+    assert.doesNotMatch(stdout, /git:\(/);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
 });
